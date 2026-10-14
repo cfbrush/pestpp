@@ -1841,6 +1841,9 @@ ModelRun SVDSolver::iteration_upgrd(RunManagerAbstract &run_manager, Termination
 		std::sort(keys.begin(), keys.end());
 		os << endl;
 		os << "    Parameters frozen during best upgrade:" << endl;
+		// enough digits to tell a value next to a bound from the bound itself
+		streamsize n_prec = os.precision(10);
+		os.unsetf(ios_base::floatfield);
 		for (auto &ikey : keys)
 		{
 			auto iter = frz_ctl_pars.find(ikey);
@@ -1849,6 +1852,7 @@ ModelRun SVDSolver::iteration_upgrd(RunManagerAbstract &run_manager, Termination
 				os << "      " << iter->first << " frozen at " << iter->second << endl;
 			}
 		}
+		os.precision(n_prec);
 	}
 
 	// clean up run_manager memory
