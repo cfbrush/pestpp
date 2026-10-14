@@ -1641,11 +1641,16 @@ ModelRun SVDSolver::iteration_upgrd(RunManagerAbstract &run_manager, Termination
                 // Enforce limits strictly on the parameters that are still in the collection
                 pest_scenario.enforce_par_limits(performance_log, scaled_active_ctl_pars, base_run_active_ctl_par, true, true);
 
-                // Put the frozen parameters back IN with their exact base values using insert()
+                // Put the frozen parameters back IN with their exact base values using insert().
+                // Record those same values as this run's frozen set: the frozen set is applied to
+                // the run's parameters when its results are read back, so it must hold what was
+                // actually run, not the freeze values used by the normal-length upgrade.
+                Parameters scaled_frozen_active_ctl_pars = lam_frozen_active_ctl_pars;
                 for (const auto& frozen_par_name : erased_frozen_pars)
                 {
                     double base_val = base_run_active_ctl_par.get_rec(frozen_par_name);
                     scaled_active_ctl_pars.insert(frozen_par_name, base_val);
+                    scaled_frozen_active_ctl_pars.update_rec(frozen_par_name, base_val);
                 }
                 // --------------------------------------------------
 
@@ -1663,7 +1668,7 @@ ModelRun SVDSolver::iteration_upgrd(RunManagerAbstract &run_manager, Termination
                 num_lamb_runs++;
                 fout_rec << "   ...calculating scaled lambda vector-scale factor: " << i_lambda << ", " << i_scale << endl;
                 
-                save_frozen_pars(fout_frz, lam_frozen_active_ctl_pars, run_id);
+                save_frozen_pars(fout_frz, scaled_frozen_active_ctl_pars, run_id);
             }
 
 			////Try to extend the previous upgrade vector

@@ -1106,6 +1106,66 @@ def glm_irls_test():
         "start_iter 2: iteration 3 parameters match the L2 run, the reweighting never fired"
 
 
+def glm_frozen_scaled_upgrade_test():
+    """the .par written for an accepted scaled-upgrade trial must reproduce its phi.
+
+    p1 starts just inside its upper bound and the upgrade pushes it out, so it is frozen;
+    a single damped lambda makes the scale(1.10) trial the best. Scaled trials run frozen
+    parameters at their base value, so that is the value the .par must report.
+    """
+    import sys
+    test_d = "glm_frozen_scaled_test"
+    if os.path.exists(test_d):
+        shutil.rmtree(test_d)
+    os.makedirs(test_d)
+    xs, ys = [1.0, 2.0, 3.0, 4.0], [1.0, -1.0, 2.0, 0.5]
+    with open(os.path.join(test_d, "model.py"), "w") as f:
+        f.write("v = dict((l.split()[0], float(l.split()[1])) for l in open('in.dat'))\n")
+        f.write("xs, ys = {0}, {1}\n".format(xs, ys))
+        f.write("with open('out.dat', 'w') as f:\n")
+        f.write("    for i, (x, y) in enumerate(zip(xs, ys)):\n")
+        f.write("        f.write('o{0} {1:.15e}\\n'.format(i + 1, v['p1'] * x + v['p2'] * y))\n")
+    with open(os.path.join(test_d, "in.tpl"), "w") as f:
+        f.write("ptf ~\np1 ~p1                       ~\np2 ~p2                       ~\n")
+    with open(os.path.join(test_d, "out.ins"), "w") as f:
+        f.write("pif ~\n" + "".join("l1 w !o{0}!\n".format(i + 1) for i in range(len(xs))))
+
+    def write_pst(name, p1, p2, noptmax):
+        obs = "".join("o{0} {1:.6f} 1.0 obgnme\n".format(i + 1, 2.0 * x + 3.0 * y)
+                      for i, (x, y) in enumerate(zip(xs, ys)))
+        with open(os.path.join(test_d, name), "w") as f:
+            f.write("pcf\n* control data\nrestart estimation\n2 4 1 0 1\n1 1 single point 1 0 0\n")
+            f.write("10.0 -2.0 0.3 0.03 10\n10.0 10.0 0.001\n0.1\n")
+            f.write("{0} 0.01 3 3 0.01 3\n0 0 0\n".format(noptmax))
+            f.write("* parameter groups\npg relative 0.01 0.0 switch 2.0 parabolic\n")
+            f.write("* parameter data\n")
+            f.write("p1 none relative {0:.15e} 0.0 1.0 pg 1.0 0.0 1\n".format(p1))
+            f.write("p2 none relative {0:.15e} -10.0 10.0 pg 1.0 0.0 1\n".format(p2))
+            f.write("* observation groups\nobgnme\n* observation data\n" + obs)
+            f.write("* model command line\n{0} model.py\n".format(os.path.basename(sys.executable)))
+            f.write("* model input/output\nin.tpl in.dat\nout.ins out.dat\n")
+            f.write("++lambdas(10.0)\n++lambda_scale_fac(0.75,1.0,1.1)\n++uncertainty(false)\n")
+
+    def iobj_phi(name, iteration):
+        df = pd.read_csv(os.path.join(test_d, name + ".iobj"), index_col=0)
+        return df.loc[iteration, "total_phi"]
+
+    write_pst("pest.pst", 0.99, 1.0, 1)
+    pyemu.os_utils.run("{0} pest.pst".format(exe_path), cwd=test_d)
+    with open(os.path.join(test_d, "pest.rec")) as f:
+        rec = f.read()
+    assert "Parameters frozen during best upgrade" in rec, "p1 was not frozen; test case is not exercising frozen parameters"
+    par = pd.read_csv(os.path.join(test_d, "pest.1.par"), sep=r"\s+", skiprows=1, header=None, index_col=0)
+    reported = iobj_phi("pest", 1)
+
+    write_pst("check.pst", par.loc["p1", 1], par.loc["p2", 1], 0)
+    pyemu.os_utils.run("{0} check.pst".format(exe_path), cwd=test_d)
+    rerun = iobj_phi("check", 0)
+    print("reported phi", reported, "phi of the written .par", rerun)
+    assert abs(rerun - reported) <= 1.0e-4 * reported, \
+        "written .par gives phi {0}, reported {1}".format(rerun, reported)
+
+
 if __name__ == "__main__":
     #freyberg_stress_test()
     #tenpar_xsec_stress_test()
