@@ -1157,7 +1157,7 @@ def glm_frozen_scaled_upgrade_test():
         return df.loc[iteration, "total_phi"]
 
     write_pst("pest.pst", 0.99, 1.0, 1)
-    pyemu.os_utils.run("{0} pest.pst".format(exe_path), cwd=test_d)
+    pyemu.os_utils.run("\"{0}\" pest.pst".format(exe_path), cwd=test_d)
     with open(os.path.join(test_d, "pest.rec")) as f:
         rec = f.read()
     assert "Parameters frozen during best upgrade" in rec, "p1 was not frozen; test case is not exercising frozen parameters"
@@ -1165,7 +1165,7 @@ def glm_frozen_scaled_upgrade_test():
     reported = iobj_phi("pest", 1)
 
     write_pst("check.pst", par.loc["p1", 1], par.loc["p2", 1], 0)
-    pyemu.os_utils.run("{0} check.pst".format(exe_path), cwd=test_d)
+    pyemu.os_utils.run("\"{0}\" check.pst".format(exe_path), cwd=test_d)
     rerun = iobj_phi("check", 0)
     print("reported phi", reported, "phi of the written .par", rerun)
     assert abs(rerun - reported) <= 1.0e-4 * reported, \
