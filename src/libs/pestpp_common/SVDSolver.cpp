@@ -1773,7 +1773,9 @@ ModelRun SVDSolver::iteration_upgrd(RunManagerAbstract &run_manager, Termination
 			double magnitude = Transformable::l2_norm(base_run_active_ctl_par_tmp, tmp_pars);
 			streamsize n_prec = os.precision(2);
 			os << "    Lambda = ";
-			os << setiosflags(ios::fixed) << setw(8) << i_lambda;
+			// general format: fixed with 2 decimals printed lambdas below 0.005 as 0.00
+			os.unsetf(ios_base::floatfield);
+			os << std::setprecision(4) << setw(8) << i_lambda;
 			os << "; Type: " << setw(12) << lambda_type;
 			os << "; length = " << std::scientific << magnitude;
 			os << setiosflags(ios::fixed);
@@ -1796,7 +1798,8 @@ ModelRun SVDSolver::iteration_upgrd(RunManagerAbstract &run_manager, Termination
 		{
 			streamsize n_prec = os.precision(2);
 			os << "      Marquardt Lambda = ";
-			os << setiosflags(ios::fixed) << setw(4) << i_lambda;
+			os.unsetf(ios_base::floatfield);
+			os << std::setprecision(4) << setw(4) << i_lambda;
 			os << "; length = " << "NA";
 			os.precision(n_prec);
 			os.unsetf(ios_base::floatfield); // reset all flags to default
