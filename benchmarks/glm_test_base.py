@@ -1156,8 +1156,15 @@ def glm_frozen_scaled_upgrade_test():
         df = pd.read_csv(os.path.join(test_d, name + ".iobj"), index_col=0)
         return df.loc[iteration, "total_phi"]
 
+    # not pyemu.os_utils.run: on Windows it appends ".exe" to a first token that ends in a
+    # quote, and unquoted it breaks on a path with spaces. subprocess takes the path as is;
+    # abspath because the child resolves a relative executable against cwd
+    def run_glm(pst_name):
+        import subprocess
+        subprocess.check_call([os.path.abspath(exe_path), pst_name], cwd=test_d)
+
     write_pst("pest.pst", 0.99, 1.0, 1)
-    pyemu.os_utils.run("\"{0}\" pest.pst".format(exe_path), cwd=test_d)
+    run_glm("pest.pst")
     with open(os.path.join(test_d, "pest.rec")) as f:
         rec = f.read()
     assert "Parameters frozen during best upgrade" in rec, "p1 was not frozen; test case is not exercising frozen parameters"
@@ -1165,7 +1172,7 @@ def glm_frozen_scaled_upgrade_test():
     reported = iobj_phi("pest", 1)
 
     write_pst("check.pst", par.loc["p1", 1], par.loc["p2", 1], 0)
-    pyemu.os_utils.run("\"{0}\" check.pst".format(exe_path), cwd=test_d)
+    run_glm("check.pst")
     rerun = iobj_phi("check", 0)
     print("reported phi", reported, "phi of the written .par", rerun)
     assert abs(rerun - reported) <= 1.0e-4 * reported, \
