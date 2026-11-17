@@ -1174,12 +1174,13 @@ def glm_frozen_scaled_upgrade_test():
 
 
 def glm_rec_full_precision_test():
-    """++glm_rec_full_precision(true) writes more digits in three places of the run record.
+    """++glm_rec_full_precision(true) writes the run record with more digits.
 
-    A two-parameter case in regularization mode: lambdas 0.001 and 10, p1 frozen during the
-    best upgrade at 0.99 (its upper bound is 0.995), PHIMLIM 1.23456, PHIMACCEPT 1.3579.
-    Without the option the record is as it always was (lambda 0.001 written as 0.00); with it
-    the three places show the numbers, and the inversion is the same.
+    A two-parameter case in regularization mode: lambdas 0.001 and 10, scale factors 0.75,
+    1.0 and 1.1, p1 frozen during the best upgrade at 0.99 (its upper bound is 0.995),
+    PHIMLIM 1.23456, PHIMACCEPT 1.3579, an observation of value 12. Without the option the
+    record is as it always was (lambda 0.001 written as 0.00, the tables with one significant
+    digit); with it these show the numbers, and the inversion is the same.
     """
     import sys
     import subprocess
@@ -1227,6 +1228,14 @@ def glm_rec_full_precision_test():
     def has(rec, text):
         return any(line.strip() == text or line.strip().startswith(text + ";") for line in rec.splitlines())
 
+    def table_row(rec, name):
+        # the first row of the record's tables that begins with this name, split on blanks
+        for line in rec.splitlines():
+            cols = line.split()
+            if cols and cols[0] == name:
+                return cols
+        raise AssertionError("no row for " + name + " in the record")
+
     as_before = run_glm("as_before", "")
     switched_off = run_glm("switched_off", "++glm_rec_full_precision(false)\n")
     full = run_glm("full", "++glm_rec_full_precision(true)\n")
@@ -1236,11 +1245,19 @@ def glm_rec_full_precision_test():
         assert has(rec, "Lambda =    10.00"), name + ": lambda 10 is not written as 10.00"
         assert "0.001;" not in rec and "frozen at 0.99" not in rec and "1.23456" not in rec.split("Regularization information")[1], \
             name + ": the record has the digits that only the option should give"
+        assert "vector-scale factor: 0.001, 0.8" in rec and "vector-scale factor: 0.001, 0.75" not in rec, \
+            name + ": the scale factor 0.75 is not written as 0.8 as before"
+        assert table_row(rec, "p1")[3:6] == ["1", "0", "1"], name + ": the parameter table is not as before"
+        assert table_row(rec, "o3")[1] == "1e+01", name + ": the observation table is not as before"
     assert has(full, "Lambda =    0.001"), "the option does not write lambda 0.001 as 0.001"
     assert has(full, "Lambda =       10"), "the option does not write lambda 10 in general format"
     assert has(full, "P1 frozen at 0.99"), "the option does not write the value p1 was frozen at"
     assert has(full, "phimlim = 1.23456") and has(full, "phimaccept = 1.3579"), \
         "the option does not write the regularization settings in full"
+    assert "vector-scale factor: 0.001, 0.75" in full, "the option does not write the scale factor 0.75"
+    assert table_row(full, "p1")[3:6] == ["0.99", "0", "0.995"], \
+        "the option does not write the initial value and bounds of p1 in the parameter table"
+    assert table_row(full, "o3")[1] == "12", "the option does not write the observation value 12"
 
     # the inversion itself is the same: same objective functions, same parameters written
     def text(name):
