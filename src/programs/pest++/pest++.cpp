@@ -220,6 +220,14 @@ int main(int argc, char* argv[]) {
 		}
 #endif
 
+		// ++glm_rec_full_precision(true): the rest of the record with 10 significant digits (the
+		// tables of parameters and observations, phi, the upgrades, the lambda and scale factor of
+		// each trial). The startup report above leaves the stream at 1 significant digit (the
+		// memory and storage lines), which is how the record has been written, and stays so
+		// without the option. The places that set a precision of their own keep it.
+		if (pest_scenario.get_pestpp_options().get_glm_rec_full_precision())
+			fout_rec.precision(10);
+
 		pest_scenario.check_inputs(fout_rec, false, false);
 		// reset this here because we want to draw from the FOSM posterior as a whole matrix
 		pest_scenario.get_pestpp_options_ptr()->set_ies_group_draws(false);
