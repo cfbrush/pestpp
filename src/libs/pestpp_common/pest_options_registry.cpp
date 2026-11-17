@@ -700,6 +700,13 @@ const std::vector<OptionSpec>& PestppOptions::get_option_registry()
         [](PestppOptions& o,const string& value,const string&)->PestppOptions::ARG_STATUS{ o.set_reg_use_achievable_target(pest_utils::parse_string_arg_to_bool(value)); return PestppOptions::ARG_STATUS::ARG_ACCEPTED; },
         [](PestppOptions& o){ o.set_reg_use_achievable_target(true); },
         [](const PestppOptions& o)->string{ return std::to_string(o.get_reg_use_achievable_target()?1:0); } },
+    // More digits in three places of PESTPP-GLM's run record, for programs that read it: lambdas
+    // in general format, frozen parameter values and regularization settings with 10 significant
+    // digits. Default false: the record is written as before.
+    OptionSpec{ "GLM_REC_FULL_PRECISION", {}, OptType::BOOL, "glm", false,
+        [](PestppOptions& o,const string& value,const string&)->PestppOptions::ARG_STATUS{ o.set_glm_rec_full_precision(pest_utils::parse_string_arg_to_bool(value)); return PestppOptions::ARG_STATUS::ARG_ACCEPTED; },
+        [](PestppOptions& o){ o.set_glm_rec_full_precision(false); },
+        [](const PestppOptions& o)->string{ return std::to_string(o.get_glm_rec_full_precision()?1:0); } },
     OptionSpec{ "PANTHER_WORKER_PARTIAL_OBS_COMMAND", {}, OptType::STRING, "panther", false,
         [](PestppOptions& o,const string& value,const string& org_value)->PestppOptions::ARG_STATUS{ o.set_panther_worker_partial_obs_command(org_value); return PestppOptions::ARG_STATUS::ARG_ACCEPTED; },
         [](PestppOptions& o){ o.set_panther_worker_partial_obs_command(""); },

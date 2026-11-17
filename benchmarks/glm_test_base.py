@@ -1173,6 +1173,83 @@ def glm_frozen_scaled_upgrade_test():
         "written .par gives phi {0}, reported {1}".format(rerun, reported)
 
 
+def glm_rec_full_precision_test():
+    """++glm_rec_full_precision(true) writes more digits in three places of the run record.
+
+    A two-parameter case in regularization mode: lambdas 0.001 and 10, p1 frozen during the
+    best upgrade at 0.99 (its upper bound is 0.995), PHIMLIM 1.23456, PHIMACCEPT 1.3579.
+    Without the option the record is as it always was (lambda 0.001 written as 0.00); with it
+    the three places show the numbers, and the inversion is the same.
+    """
+    import sys
+    import subprocess
+    test_d = "glm_rec_full_precision_test"
+    if os.path.exists(test_d):
+        shutil.rmtree(test_d)
+    os.makedirs(test_d)
+    xs, ys = [1.0, 2.0, 3.0, 4.0], [1.0, -1.0, 2.0, 0.5]
+    with open(os.path.join(test_d, "model.py"), "w") as f:
+        f.write("v = dict((l.split()[0], float(l.split()[1])) for l in open('in.dat'))\n")
+        f.write("xs, ys = {0}, {1}\n".format(xs, ys))
+        f.write("with open('out.dat', 'w') as f:\n")
+        f.write("    for i, (x, y) in enumerate(zip(xs, ys)):\n")
+        f.write("        f.write('o{0} {1:.15e}\\n'.format(i + 1, v['p1'] * x + v['p2'] * y))\n")
+    with open(os.path.join(test_d, "in.tpl"), "w") as f:
+        f.write("ptf ~\np1 ~p1                       ~\np2 ~p2                       ~\n")
+    with open(os.path.join(test_d, "out.ins"), "w") as f:
+        f.write("pif ~\n" + "".join("l1 w !o{0}!\n".format(i + 1) for i in range(len(xs))))
+
+    def write_pst(name, option_line):
+        obs = "".join("o{0} {1:.6f} 1.0 obgnme\n".format(i + 1, 2.0 * x + 3.0 * y)
+                      for i, (x, y) in enumerate(zip(xs, ys)))
+        with open(os.path.join(test_d, name), "w") as f:
+            f.write("pcf\n* control data\nrestart regularization\n2 4 1 1 2\n1 1 single point 1 0 0\n")
+            f.write("10.0 -2.0 0.3 0.03 10\n10.0 10.0 0.001\n0.1\n")
+            f.write("1 0.01 3 3 0.01 3\n0 0 0\n")
+            f.write("* parameter groups\npg relative 0.01 0.0 switch 2.0 parabolic\n")
+            f.write("* parameter data\n")
+            f.write("p1 none relative 0.99 0.0 0.995 pg 1.0 0.0 1\n")
+            f.write("p2 none relative 1.0 -10.0 10.0 pg 1.0 0.0 1\n")
+            f.write("* observation groups\nobgnme\nregul_p\n* observation data\n" + obs)
+            f.write("* model command line\n{0} model.py\n".format(os.path.basename(sys.executable)))
+            f.write("* model input/output\nin.tpl in.dat\nout.ins out.dat\n")
+            f.write("* prior information\npi1 1.0 * p2 = 1.0 1.0 regul_p\n")
+            f.write("* regularization\n1.23456 1.3579 0.1\n1.0 1.0e-10 1.0e10\n1.3 1.0e-2 1\n")
+            f.write("++lambdas(0.001,10.0)\n++lambda_scale_fac(0.75,1.0,1.1)\n++uncertainty(false)\n")
+            f.write(option_line)
+
+    def run_glm(name, option_line):
+        write_pst(name + ".pst", option_line)
+        subprocess.check_call([os.path.abspath(exe_path), name + ".pst"], cwd=test_d)
+        with open(os.path.join(test_d, name + ".rec")) as f:
+            return f.read()
+
+    def has(rec, text):
+        return any(line.strip() == text or line.strip().startswith(text + ";") for line in rec.splitlines())
+
+    as_before = run_glm("as_before", "")
+    switched_off = run_glm("switched_off", "++glm_rec_full_precision(false)\n")
+    full = run_glm("full", "++glm_rec_full_precision(true)\n")
+
+    for name, rec in (("as_before", as_before), ("switched_off", switched_off)):
+        assert has(rec, "Lambda =     0.00"), name + ": lambda 0.001 is not written as 0.00"
+        assert has(rec, "Lambda =    10.00"), name + ": lambda 10 is not written as 10.00"
+        assert "0.001;" not in rec and "frozen at 0.99" not in rec and "1.23456" not in rec.split("Regularization information")[1], \
+            name + ": the record has the digits that only the option should give"
+    assert has(full, "Lambda =    0.001"), "the option does not write lambda 0.001 as 0.001"
+    assert has(full, "Lambda =       10"), "the option does not write lambda 10 in general format"
+    assert has(full, "P1 frozen at 0.99"), "the option does not write the value p1 was frozen at"
+    assert has(full, "phimlim = 1.23456") and has(full, "phimaccept = 1.3579"), \
+        "the option does not write the regularization settings in full"
+
+    # the inversion itself is the same: same objective functions, same parameters written
+    def text(name):
+        with open(os.path.join(test_d, name)) as f:
+            return f.read()
+    for ext in (".iobj", ".1.par", ".par"):
+        assert text("as_before" + ext) == text("full" + ext), ext + " differs with the option"
+
+
 if __name__ == "__main__":
     #freyberg_stress_test()
     #tenpar_xsec_stress_test()
