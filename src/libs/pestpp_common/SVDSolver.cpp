@@ -1361,6 +1361,8 @@ ModelRun SVDSolver::iteration_upgrd(RunManagerAbstract &run_manager, Termination
 	// instead of the previous iteration's destructively-resized leftovers.
 	std::vector<double> lambda_scale_vec = pest_scenario.get_pestpp_options().get_lambda_scale_vec();
 	ostream &os = file_manager.rec_ofstream();
+	// ++glm_rec_full_precision(true): lambdas and frozen parameter values with more digits
+	const bool rec_full_precision = pest_scenario.get_pestpp_options().get_glm_rec_full_precision();
 	ostream &fout_restart = file_manager.get_ofstream("rst");
 	int num_success_calc = 0;
 	int num_lamb_runs = 0;
@@ -1870,9 +1872,14 @@ ModelRun SVDSolver::iteration_upgrd(RunManagerAbstract &run_manager, Termination
 			double magnitude = Transformable::l2_norm(base_run_active_ctl_par_tmp, tmp_pars);
 			streamsize n_prec = os.precision(2);
 			os << "    Lambda = ";
-			// general format: fixed with 2 decimals printed lambdas below 0.005 as 0.00
-			os.unsetf(ios_base::floatfield);
-			os << std::setprecision(4) << setw(8) << i_lambda;
+			if (rec_full_precision)
+			{
+				// general format: fixed with 2 decimals prints lambdas below 0.005 as 0.00
+				os.unsetf(ios_base::floatfield);
+				os << std::setprecision(4) << setw(8) << i_lambda;
+			}
+			else
+				os << setiosflags(ios::fixed) << setw(8) << i_lambda;
 			os << "; Type: " << setw(12) << lambda_type;
 			os << "; length = " << std::scientific << magnitude;
 			os << setiosflags(ios::fixed);
@@ -1895,8 +1902,13 @@ ModelRun SVDSolver::iteration_upgrd(RunManagerAbstract &run_manager, Termination
 		{
 			streamsize n_prec = os.precision(2);
 			os << "      Marquardt Lambda = ";
-			os.unsetf(ios_base::floatfield);
-			os << std::setprecision(4) << setw(4) << i_lambda;
+			if (rec_full_precision)
+			{
+				os.unsetf(ios_base::floatfield);
+				os << std::setprecision(4) << setw(4) << i_lambda;
+			}
+			else
+				os << setiosflags(ios::fixed) << setw(4) << i_lambda;
 			os << "; length = " << "NA";
 			os.precision(n_prec);
 			os.unsetf(ios_base::floatfield); // reset all flags to default
@@ -1941,9 +1953,14 @@ ModelRun SVDSolver::iteration_upgrd(RunManagerAbstract &run_manager, Termination
 		std::sort(keys.begin(), keys.end());
 		os << endl;
 		os << "    Parameters frozen during best upgrade:" << endl;
-		// enough digits to tell a value next to a bound from the bound itself
-		streamsize n_prec = os.precision(10);
-		os.unsetf(ios_base::floatfield);
+		// ++glm_rec_full_precision(true): enough digits to tell a value next to a bound from
+		// the bound itself (otherwise the stream's precision as it is, often 1 digit)
+		streamsize n_prec = os.precision();
+		if (rec_full_precision)
+		{
+			os.precision(10);
+			os.unsetf(ios_base::floatfield);
+		}
 		for (auto &ikey : keys)
 		{
 			auto iter = frz_ctl_pars.find(ikey);

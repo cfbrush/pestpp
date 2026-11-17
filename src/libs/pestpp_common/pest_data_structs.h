@@ -812,6 +812,15 @@ public:
     /// regularization.
     void set_reg_use_achievable_target(bool _flag) { reg_use_achievable_target = _flag; }
     bool get_reg_use_achievable_target() const { return reg_use_achievable_target; }
+    /// When true, PESTPP-GLM writes some numbers of the run record with more digits: the Marquardt
+    /// lambdas of the lambda-testing table in general format (the default, fixed with two
+    /// decimals, shows every lambda below 0.005 as 0.00) and the upgrade lengths next to them
+    /// with four decimals in place of two, and the values of the parameters frozen during the
+    /// best upgrade and the regularization settings with 10 significant digits (the default
+    /// takes the stream's precision as it happens to be, often a single digit).
+    /// For programs that read the record. Default false: the record is written as before.
+    void set_glm_rec_full_precision(bool _flag) { glm_rec_full_precision = _flag; }
+    bool get_glm_rec_full_precision() const { return glm_rec_full_precision; }
     /// A command the AGENT runs when the master asks for partial results, immediately before
     /// the output files are read. For models that buffer their output and need a nudge - a
     /// flush, a checkpoint dump - before a mid-run read means anything. Empty (the default)
@@ -1154,6 +1163,7 @@ private:
 
 	bool panther_agent_restart_on_error;
 	bool reg_use_achievable_target;
+	bool glm_rec_full_precision;
 	string panther_worker_partial_obs_command;
 	string panther_worker_status_file;
 	int panther_agent_no_ping_timeout_secs;

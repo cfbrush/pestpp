@@ -3004,6 +3004,8 @@ The following table summarizes the contents of files that are recorded by PESTPP
 
 Table 6.1. Files recorded by PESTPP-GLM.
 
+The run record file is written to be read by a person, and some of its numbers are rounded for that purpose. In the table of lambda-testing results, a Marquardt lambda is written with two decimal places, so that any lambda below 0.005 appears as 0.00. The values of parameters that were frozen during the best upgrade, and the regularization settings that are echoed at the start of the file, are written with as few as one significant digit. Where a program reads the run record file, the *glm_rec_full_precision* control variable can be set to *true*: the lambdas are then written in general format (and the length of each upgrade vector, beside them, with four decimal places instead of two), and those values and settings with ten significant digits. Nothing else in the file changes, and the inversion process is not affected.
+
 ## <a id='s10-2' />6.3 Summary of PESTPP-GLM Control Variables
 
 ### <a id='s10-2-1' />6.3.1 General
@@ -3055,6 +3057,7 @@ Note also that the number of control variables may change with time. Refer to th
 | *glm_irls_start_iter(1)*            | integer                | The first iteration after which IRLS reweighting is applied; earlier iterations use the control file weights unchanged. Only used if *glm_irls_eps* is greater than zero. |
 | *reg_use_achievable_target(true)*           | boolean                | Allow PESTPP-GLM to relax the target measurement objective function for an iteration when the measurement objective function has stalled and FRACPHIM, rather than PHIMLIM, is setting that target. See section 6.2.2. Default is true. |
 | *max_reg_iter(20)*           | integer                | The maximum number of iterations of the numerical procedure that finds the regularization weight factor for an iteration. See section 4.16. Default is 20. |
+| *glm_rec_full_precision(false)*           | boolean                | Write the Marquardt lambdas of the lambda-testing table in general format, and the values of parameters frozen during the best upgrade and the echoed regularization settings with ten significant digits, in the run record file. For programs that read that file. See section 6.2.12. Default is false. |
 
 Table 6.2 PESTPP-GLM control variables. Variables which control parallel run management can be supplied in addition to these. See section 5.3.5.
 

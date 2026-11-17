@@ -403,10 +403,16 @@ void OutputFileWriter::scenario_report(std::ostream &os, bool report_mode)
 		(pest_scenario.get_regul_scheme_ptr()))
 	{
 		os << "Regularization information:" << endl;
-		// the stream may be at 1 significant digit here, which shows 1.40e9 as 1e+09
-		streamsize n_prec = os.precision(10);
+		// the stream may be at 1 significant digit here, which shows 1.40e9 as 1e+09:
+		// ++glm_rec_full_precision(true) writes these with 10 significant digits
+		const bool full_precision = pest_scenario.get_pestpp_options().get_glm_rec_full_precision();
+		streamsize n_prec = os.precision();
 		ios_base::fmtflags n_flags = os.flags();
-		os.unsetf(ios_base::floatfield);
+		if (full_precision)
+		{
+			os.precision(10);
+			os.unsetf(ios_base::floatfield);
+		}
 		os << setw(0) << "    phimlim = " << pest_scenario.get_regul_scheme_ptr()->get_phimlim() << endl;
 		os << setw(0) << "    fracphim = " << pest_scenario.get_regul_scheme_ptr()->get_fracphim() << endl;
 		os << setw(0) << "    phimaccept = " << pest_scenario.get_regul_scheme_ptr()->get_phimaccept() << endl;
